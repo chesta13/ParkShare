@@ -1,0 +1,124 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  DRIVER
+  OWNER
+  BOTH
+}
+
+enum SpaceStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  BLOCKED
+}
+
+enum BookingStatus {
+  PENDING_PAYMENT
+  CONFIRMED
+  ACTIVE
+  COMPLETED
+  CANCELLED
+  PAYMENT_FAILED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+
+model User {
+  id          String        @id @default(uuid())
+  name        String?
+  email       String        @unique
+  phone       String?       @unique
+  role        UserRole      @default(BOTH)
+  spaces      ParkingSpace[]
+  bookings    Booking[]
+  reviews     Review[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model ParkingSpace {
+  id                    String              @id @default(uuid())
+  ownerId               String
+  owner                 User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  title                 String
+  description           String?
+  addressLine           String
+  locality              String
+  city                  String
+  latitude              Decimal?            @db.Decimal(10, 7)
+  longitude             Decimal?            @db.Decimal(10, 7)
+  vehicleTypes          String[]
+  hourlyRateMinor       Int
+  currency              String              @default("INR")
+  status                SpaceStatus         @default(DRAFT)
+  availability          AvailabilityWindow[]
+  bookings              Booking[]
+  reviews               Review[]
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  @@index([city, locality, status])
+  @@index([ownerId])
+}
+
+model AvailabilityWindow {
+  id             String        @id @default(uuid())
+  parkingSpaceId String
+  parkingSpace   ParkingSpace  @relation(fields: [parkingSpaceId], references: [id], onDelete: Cascade)
+  startAt        DateTime
+  endAt          DateTime
+  isAvailable    Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+
+  @@index([parkingSpaceId, startAt, endAt])
+}
+
+model Booking {
+  id              String         @id @default(uuid())
+  spaceId         String
+  driverId         String
+  space            ParkingSpace  @relation(fields: [spaceId], references: [id], onDelete: Restrict)
+  driver           User           @relation(fields: [driverId], references: [id], onDelete: Restrict)
+  startAt          DateTime
+  endAt            DateTime
+  subtotalMinor    Int
+  platformFeeMinor Int
+  totalMinor       Int
+  currency         String         @default("INR")
+  status           BookingStatus  @default(PENDING_PAYMENT)
+  paymentStatus    PaymentStatus  @default(PENDING)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  review           Review?
+
+  @@index([spaceId, startAt, endAt])
+  @@index([driverId, createdAt])
+}
+
+model Review {
+  id        String       @id @default(uuid())
+  bookingId String       @unique
+  authorId  String
+  spaceId   String
+  booking   Booking      @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  author    User         @relation(fields: [authorId], references: [id], onDelete: Restrict)
+  space     ParkingSpace @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  rating    Int
+  comment   String?
+  createdAt DateTime     @default(now())
+
+  @@index([spaceId, createdAt])
+}
