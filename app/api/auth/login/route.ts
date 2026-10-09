@@ -1,10 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
 import { assertSessionSecretConfigured, createSessionToken, verifyPassword, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/auth";
+import { consumeRateLimit, getRequestClientKey, rateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const clientKey = getRequestClientKey(request.headers);
+  if (clientKey) {
+    const ipLimit = consumeRateLimit(`auth:login:ip:${clientKey}`, 20, 15 * 60 * 1000);
+    if (!ipLimit.allowed) return rateLimitResponse(ipLimit.retryAfterSeconds);
+  }
+
   let body: unknown;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
@@ -15,6 +22,10 @@ export async function POST(request: NextRequest) {
   const input = body as Record<string, unknown>;
   const email = typeof input.email === "string" ? input.email.trim().toLowerCase() : "";
   const password = typeof input.password === "string" ? input.password : "";
+  if (email) {
+    const accountLimit = consumeRateLimit(`auth:login:account:${email}`, 8, 15 * 60 * 1000);
+    if (!accountLimit.allowed) return rateLimitResponse(accountLimit.retryAfterSeconds);
+  }
   if (!email || !password || email.length > 254 || password.length > 128) {
     return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
   }

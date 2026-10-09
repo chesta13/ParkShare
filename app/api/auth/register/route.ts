@@ -1,11 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { UserRole } from "@prisma/client";
 import { assertSessionSecretConfigured, createSessionToken, hashPassword, SESSION_COOKIE, SESSION_MAX_AGE } from "@/lib/auth";
+import { consumeRateLimit, getRequestClientKey, rateLimitResponse } from "@/lib/rate-limit";
 import { prisma } from "@/lib/prisma";
 
 export const runtime = "nodejs";
 
 export async function POST(request: NextRequest) {
+  const clientKey = getRequestClientKey(request.headers);
+  if (clientKey) {
+    const ipLimit = consumeRateLimit(`auth:register:ip:${clientKey}`, 10, 60 * 60 * 1000);
+    if (!ipLimit.allowed) return rateLimitResponse(ipLimit.retryAfterSeconds);
+  }
+
   let body: unknown;
   try { body = await request.json(); } catch {
     return NextResponse.json({ error: "Request body must be valid JSON." }, { status: 400 });
@@ -23,6 +30,9 @@ export async function POST(request: NextRequest) {
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 254) {
     return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
   }
+  const emailLimit = consumeRateLimit(`auth:register:email:${email}`, 3, 60 * 60 * 1000);
+  if (!emailLimit.allowed) return rateLimitResponse(emailLimit.retryAfterSeconds);
+
   if (password.length < 12 || password.length > 128) {
     return NextResponse.json({ error: "Password must be between 12 and 128 characters." }, { status: 400 });
   }
