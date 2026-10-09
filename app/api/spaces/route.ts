@@ -85,7 +85,7 @@ export async function POST(request: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Listing service is temporarily unavailable." }, { status: 503 });
   }
-  if (!user || ![UserRole.OWNER, UserRole.BOTH].includes(user.role)) {
+  if (!user || (user.role !== UserRole.OWNER && user.role !== UserRole.BOTH)) {
     return NextResponse.json({ error: "An owner account is required to create a listing." }, { status: 403 });
   }
 

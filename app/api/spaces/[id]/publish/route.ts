@@ -12,7 +12,7 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
 
   try {
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
-    if (!user || ![UserRole.OWNER, UserRole.BOTH].includes(user.role)) {
+    if (!user || (user.role !== UserRole.OWNER && user.role !== UserRole.BOTH)) {
       return NextResponse.json({ error: "An owner account is required to publish listings." }, { status: 403 });
     }
     const space = await prisma.parkingSpace.findFirst({
