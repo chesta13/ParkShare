@@ -109,6 +109,7 @@ model Booking {
 
   @@index([spaceId, startAt, endAt])
   @@index([driverId, createdAt])
+  @@index([status, holdExpiresAt])
 }
 
 model Review {

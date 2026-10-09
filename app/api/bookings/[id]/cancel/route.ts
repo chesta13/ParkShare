@@ -23,6 +23,13 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
       data: { status: BookingStatus.CANCELLED },
     });
     if (result.count === 0) {
+      const alreadyExpired = await prisma.booking.findFirst({
+        where: { id, driverId: userId, status: BookingStatus.EXPIRED },
+        select: { id: true },
+      });
+      if (alreadyExpired) {
+        return NextResponse.json({ error: "This booking hold has expired.", status: BookingStatus.EXPIRED }, { status: 410 });
+      }
       return NextResponse.json({ error: "Pending booking not found or it can no longer be cancelled." }, { status: 404 });
     }
     return NextResponse.json({ success: true, message: "Booking hold cancelled." });

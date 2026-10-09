@@ -1,4 +1,8 @@
 import { expect, test } from "@playwright/test";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+test.afterAll(async () => { await prisma.$disconnect(); });
 
 function localDateTime(date: Date): string {
   return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
@@ -68,4 +72,20 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await expect(page.getByText(new RegExp(`CI Test Parking ${unique}`))).toBeVisible();
   await page.getByRole("button", { name: "Cancel hold" }).click();
   await expect(page.getByText(/Status: CANCELLED/)).toBeVisible();
+
+  await page.goto("/");
+  await page.getByLabel("Destination").fill("CI Test Locality");
+  await page.getByLabel("Start time").fill(localDateTime(start));
+  await page.getByLabel("End time").fill(localDateTime(end));
+  await page.getByRole("button", { name: "Find parking" }).click();
+  const holdResponsePromise = page.waitForResponse((response) => response.url().endsWith("/api/bookings") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "Hold this space for 10 minutes" }).click();
+  const holdResponse = await holdResponsePromise;
+  expect(holdResponse.ok()).toBeTruthy();
+  const { booking } = await holdResponse.json() as { booking: { id: string } };
+  await prisma.booking.update({ where: { id: booking.id }, data: { holdExpiresAt: new Date(Date.now() - 60_000) } });
+
+  await page.goto("/bookings");
+  await expect(page.getByText(/Status: EXPIRED/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cancel hold" })).toHaveCount(0);
 });
