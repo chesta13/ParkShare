@@ -38,7 +38,30 @@ export default function OwnerPage() {
     }
   }, []);
 
-  useEffect(() => { void loadSpaces(); }, [loadSpaces]);
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/spaces?mine=1", { cache: "no-store" })
+      .then(async (response) => ({ response, result: await response.json().catch(() => ({})) }))
+      .then(({ response, result }) => {
+        if (cancelled) return;
+        if (response.status === 401) {
+          setSignedOut(true);
+          setSpaces([]);
+        } else if (!response.ok) {
+          setError(typeof result.error === "string" ? result.error : "Could not load your listings.");
+        } else {
+          setSignedOut(false);
+          setSpaces(Array.isArray(result.spaces) ? result.spaces : []);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError("Could not load your listings.");
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => { cancelled = true; };
+  }, []);
 
   async function publishSpace(id: string) {
     setPublishingId(id);
