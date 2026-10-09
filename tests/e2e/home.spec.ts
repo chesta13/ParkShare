@@ -109,9 +109,10 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await ownerPage.getByLabel("Email").fill(`owner-${unique}@example.com`);
   await ownerPage.getByLabel("Password").fill(ownerPassword);
   await ownerPage.getByRole("button", { name: "Sign in" }).click();
-  await expect(ownerPage.getByRole("heading", { name: "Recent booking activity" })).toBeVisible();
-  await expect(ownerPage.getByText(new RegExp(`CI Test Parking ${unique}`))).toBeVisible();
-  await expect(ownerPage.getByText(/Status: PENDING_PAYMENT · Payment: PENDING/)).toBeVisible();
+  const bookingActivity = ownerPage.locator("section").filter({ has: ownerPage.getByRole("heading", { name: "Recent booking activity" }) });
+  await expect(bookingActivity.getByRole("heading", { name: "Recent booking activity" })).toBeVisible();
+  await expect(bookingActivity.getByRole("heading", { name: `CI Test Parking ${unique}`, exact: true })).toBeVisible();
+  await expect(bookingActivity.getByText(/Status: PENDING_PAYMENT · Payment: PENDING/)).toBeVisible();
   await ownerContext.close();
 
   await page.getByRole("link", { name: "My bookings" }).click();
