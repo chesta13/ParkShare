@@ -1,0 +1,139 @@
+import { expect, test } from "@playwright/test";
+import { PrismaClient } from "@prisma/client";
+
+const prisma = new PrismaClient();
+test.afterAll(async () => { await prisma.$disconnect(); });
+
+function localDateTime(date: Date): string {
+  return new Date(date.getTime() - date.getTimezoneOffset() * 60_000).toISOString().slice(0, 16);
+}
+
+test("home page exposes the parking search", async ({ page }) => {
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: /Park closer/ })).toBeVisible();
+  await expect(page.getByLabel("Destination")).toBeVisible();
+  await expect(page.getByRole("button", { name: "Find parking" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Parking spaces" })).toBeVisible();
+});
+
+test("sign-in and registration screens are reachable", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("link", { name: "Sign in" }).click();
+  await expect(page.getByRole("heading", { name: "Sign in to ParkShare." })).toBeVisible();
+  await page.getByRole("link", { name: "Create account" }).click();
+  await expect(page.getByRole("heading", { name: "Create your ParkShare account." })).toBeVisible();
+});
+
+test("owner can publish a listing and a driver can create and cancel a booking hold", async ({ page, browser }) => {
+  const invalidVehicleResponse = await page.request.get("/api/spaces?vehicleType=truck");
+  expect(invalidVehicleResponse.status()).toBe(400);
+  const invalidPriceResponse = await page.request.get("/api/spaces?minRate=100&maxRate=50");
+  expect(invalidPriceResponse.status()).toBe(400);
+
+  const unique = Date.now();
+  const ownerPassword = "ParkShare-CI-Owner-123!";
+  const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  start.setMinutes(0, 0, 0);
+  const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+
+  await page.goto("/register");
+  await page.getByLabel("Name").fill("CI Owner");
+  await page.getByLabel("Email").fill(`owner-${unique}@example.com`);
+  await page.getByLabel(/Password/).fill(ownerPassword);
+  await page.getByLabel("I want to").selectOption("OWNER");
+  await page.getByRole("button", { name: "Create account" }).click();
+  await page.getByRole("link", { name: /List my space/ }).click();
+
+  await page.getByLabel("Area / locality").fill("CI Test Locality");
+  await page.getByLabel("City").fill("Test City");
+  await page.getByLabel("Address or access description").fill("Use the marked driveway entrance.");
+  await page.getByLabel("Listing title").fill(`CI Test Parking ${unique}`);
+  await page.getByLabel("Vehicle type").selectOption("car");
+  await page.getByLabel("Description", { exact: true }).fill("Automated test listing.");
+  await page.getByLabel("Available from").fill(localDateTime(start));
+  await page.getByLabel("Available until").fill(localDateTime(end));
+  await page.getByLabel(/Hourly price/).fill("60");
+  const listingResponsePromise = page.waitForResponse((response) => response.url().endsWith("/api/spaces") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "Save listing draft" }).click();
+  const listingResponse = await listingResponsePromise;
+  expect(listingResponse.status()).toBe(201);
+  const { space: createdSpace } = await listingResponse.json() as { space: { id: string } };
+  await expect(page.getByRole("heading", { name: "Listing draft saved." })).toBeVisible();
+  await page.getByRole("link", { name: "Back to dashboard" }).click();
+  await page.getByRole("button", { name: "Publish listing" }).click();
+  await expect(page.getByText("Status: ACTIVE")).toBeVisible();
+  await page.getByRole("button", { name: "Pause listing" }).click();
+  await expect(page.getByText("Status: PAUSED")).toBeVisible();
+  const pausedSearchResponse = await page.request.get(`/api/spaces?locality=CI%20Test%20Locality&startAt=${encodeURIComponent(start.toISOString())}&endAt=${encodeURIComponent(end.toISOString())}`);
+  expect(pausedSearchResponse.ok()).toBeTruthy();
+  const pausedSearchResult = await pausedSearchResponse.json() as { spaces: Array<{ title: string }> };
+  expect(pausedSearchResult.spaces.some((space) => space.title === `CI Test Parking ${unique}`)).toBe(false);
+  await page.getByRole("button", { name: "Publish listing" }).click();
+  await expect(page.getByText("Status: ACTIVE")).toBeVisible();
+
+  await page.goto("/register");
+  await page.getByLabel("Name").fill("CI Driver");
+  await page.getByLabel("Email").fill(`driver-${unique}@example.com`);
+  await page.getByLabel(/Password/).fill("ParkShare-CI-Driver-123!");
+  await page.getByLabel("I want to").selectOption("DRIVER");
+  const driverRegistrationPromise = page.waitForResponse((response) => response.url().endsWith("/api/auth/register") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "Create account" }).click();
+  const driverRegistrationResponse = await driverRegistrationPromise;
+  expect(driverRegistrationResponse.status()).toBe(201);
+  const unauthorizedPauseResponse = await page.request.post(`/api/spaces/${createdSpace.id}/pause`);
+  expect(unauthorizedPauseResponse.status()).toBe(403);
+  await page.getByLabel("Destination").fill("CI Test Locality");
+  await page.getByLabel("Start time").fill(localDateTime(start));
+  await page.getByLabel("End time").fill(localDateTime(end));
+  await page.getByLabel("Vehicle type").selectOption("bike");
+  await page.getByLabel("Max ₹/hr").fill("100");
+  await page.getByRole("button", { name: "Find parking" }).click();
+  await expect(page.getByText(/No active spaces match/)).toBeVisible();
+  await page.getByLabel("Vehicle type").selectOption("car");
+  await page.getByLabel("Max ₹/hr").fill("50");
+  await page.getByRole("button", { name: "Find parking" }).click();
+  await expect(page.getByText(/No active spaces match/)).toBeVisible();
+  await page.getByLabel("Min ₹/hr").fill("70");
+  await page.getByLabel("Max ₹/hr").fill("100");
+  await page.getByRole("button", { name: "Find parking" }).click();
+  await expect(page.getByText(/No active spaces match/)).toBeVisible();
+  await page.getByLabel("Min ₹/hr").fill("0");
+  await page.getByRole("button", { name: "Find parking" }).click();
+  await expect(page.getByRole("heading", { name: new RegExp(`CI Test Parking ${unique}`) })).toBeVisible();
+  await page.getByRole("button", { name: "Hold this space for 10 minutes" }).click();
+  await expect(page.getByRole("status")).toContainText("Payment is not integrated yet; no charge has been taken.");
+
+  const ownerContext = await browser.newContext({ baseURL: "http://127.0.0.1:3000" });
+  const ownerPage = await ownerContext.newPage();
+  await ownerPage.goto("/login");
+  await ownerPage.getByLabel("Email").fill(`owner-${unique}@example.com`);
+  await ownerPage.getByLabel("Password").fill(ownerPassword);
+  await ownerPage.getByRole("button", { name: "Sign in" }).click();
+  const bookingActivity = ownerPage.locator("section").filter({ has: ownerPage.getByRole("heading", { name: "Recent booking activity" }) });
+  await expect(bookingActivity.getByRole("heading", { name: "Recent booking activity" })).toBeVisible();
+  await expect(bookingActivity.getByRole("heading", { name: `CI Test Parking ${unique}`, exact: true })).toBeVisible();
+  await expect(bookingActivity.getByText(/Status: PENDING_PAYMENT · Payment: PENDING/)).toBeVisible();
+  await ownerContext.close();
+
+  await page.getByRole("link", { name: "My bookings" }).click();
+  await expect(page.getByRole("heading", { name: "My bookings" })).toBeVisible();
+  await expect(page.getByText(new RegExp(`CI Test Parking ${unique}`))).toBeVisible();
+  await page.getByRole("button", { name: "Cancel hold" }).click();
+  await expect(page.getByText(/Status: CANCELLED/)).toBeVisible();
+
+  await page.goto("/");
+  await page.getByLabel("Destination").fill("CI Test Locality");
+  await page.getByLabel("Start time").fill(localDateTime(start));
+  await page.getByLabel("End time").fill(localDateTime(end));
+  await page.getByRole("button", { name: "Find parking" }).click();
+  const holdResponsePromise = page.waitForResponse((response) => response.url().endsWith("/api/bookings") && response.request().method() === "POST");
+  await page.getByRole("button", { name: "Hold this space for 10 minutes" }).click();
+  const holdResponse = await holdResponsePromise;
+  expect(holdResponse.ok()).toBeTruthy();
+  const { booking } = await holdResponse.json() as { booking: { id: string } };
+  await prisma.booking.update({ where: { id: booking.id }, data: { holdExpiresAt: new Date(Date.now() - 60_000) } });
+
+  await page.goto("/bookings");
+  await expect(page.getByText(/Status: EXPIRED/)).toBeVisible();
+  await expect(page.getByRole("button", { name: "Cancel hold" })).toHaveCount(0);
+});

@@ -50,10 +50,24 @@ ParkShare is intentionally **not** a society/RWA management product in the MVP. 
 
 ## Repository status
 
-**Stage:** Project initialization
+**Stage:** Functional marketplace foundation; pre-payment MVP
 
-The first development milestone is to establish the product requirements, architecture, data model, API contracts, and frontend/backend foundations before implementing marketplace flows.
+Implemented flows include account registration/login with signed sessions, database-backed listing drafts, owner publishing and pause/resume controls, availability windows, locality/time search with vehicle-type and hourly-price filters, server-calculated booking prices, serializable booking holds, driver booking history, owner booking activity, cancellation, and expiry handling. CI runs dependency auditing, lint, type checking, unit tests, a production build, and Playwright end-to-end coverage.
+
+Not implemented: live payment processing, email verification, password reset, reviews, admin moderation, map-based discovery, and production deployment. Booking holds do not charge money. A configured PostgreSQL database and a unique `SESSION_SECRET` are required to exercise database-backed flows locally. Login and registration currently have process-local rate limits as a defensive baseline; before production, replace them with a shared atomic limiter and configure trusted proxy IP forwarding, since process-local limits do not coordinate across multiple instances.
 
 ## Core principle
 
 > Build the smallest system that can prove strangers will successfully transact around unused parking capacity — then add complexity only when the real-world problem demands it.
+
+
+## Local development
+
+1. Install Node.js 22 or newer and PostgreSQL.
+2. Copy `.env.example` to `.env` and set `DATABASE_URL` to your local database connection string.
+3. Replace `SESSION_SECRET` with a unique random value of at least 32 characters. Do not commit `.env` or production secrets.
+4. Install the locked dependencies with `npm ci`.
+5. Apply the initial Prisma schema with `npm run db:push` and generate the client with `npm run db:generate`.
+6. Start the web app with `npm run dev`.
+
+The account, listing, search, and booking-hold flows require a reachable PostgreSQL database. Real payments, email verification, password reset, reviews, admin moderation, and production deployment are not implemented yet. Do not use this MVP for real payments or sensitive production data.

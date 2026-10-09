@@ -6,6 +6,7 @@
 - `name`
 - `email`
 - `phone`
+- `passwordHash` — nullable salted scrypt hash for password-authenticated accounts; never expose through API responses
 - `role` — DRIVER | OWNER | BOTH
 - `createdAt`
 - `updatedAt`

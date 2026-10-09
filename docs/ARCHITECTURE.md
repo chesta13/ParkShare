@@ -22,8 +22,11 @@ Keep the first release simple enough to develop and deploy quickly, while keepin
 - Prisma ORM
 
 ### Authentication
-- Email/OTP or OAuth provider abstraction
-- User roles: DRIVER and OWNER
+- Email/password registration and login for the initial MVP
+- Passwords are stored as salted scrypt hashes, never plaintext
+- Signed, expiring session tokens in HttpOnly, SameSite=Lax cookies
+- User roles: DRIVER, OWNER and BOTH
+- Email verification, password reset, rate limiting and production identity-provider integration remain required before a public production launch
 
 ### Payments
 - Payment-provider abstraction in the domain layer
