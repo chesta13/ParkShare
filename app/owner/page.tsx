@@ -20,8 +20,6 @@ export default function OwnerPage() {
   const [publishingId, setPublishingId] = useState("");
 
   const loadSpaces = useCallback(async () => {
-    setLoading(true);
-    setError("");
     try {
       const response = await fetch("/api/spaces?mine=1", { cache: "no-store" });
       const result = await response.json().catch(() => ({}));
@@ -81,7 +79,7 @@ export default function OwnerPage() {
         </div>
         <div className="owner-card">
           <div className="owner-card-label">YOUR LISTING</div>
-          <h2>Let's set it up.</h2>
+          <h2>Let&apos;s set it up.</h2>
           <p>Create a draft, set your first availability window, then publish when you are ready.</p>
           <Link className="btn btn-primary btn-large" href={signedOut ? "/login" : "/owner/list-space"}>List my space →</Link>
           {signedOut && <p><Link href="/register">New here? Create an account</Link></p>}
