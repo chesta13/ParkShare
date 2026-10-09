@@ -7,7 +7,7 @@ import tseslint from "typescript-eslint";
 
 export default tseslint.config(
   {
-    ignores: [".next/**", "node_modules/**", "playwright-report/**", "test-results/**"],
+    ignores: [".git/**", "**/.next/**", "**/node_modules/**", "playwright-report/**", "test-results/**", "coverage/**", "dist/**", "out/**", "**/*.tsbuildinfo"],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommended,

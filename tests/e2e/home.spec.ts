@@ -25,6 +25,11 @@ test("sign-in and registration screens are reachable", async ({ page }) => {
 });
 
 test("owner can publish a listing and a driver can create and cancel a booking hold", async ({ page }) => {
+  const invalidVehicleResponse = await page.request.get("/api/spaces?vehicleType=truck");
+  expect(invalidVehicleResponse.status()).toBe(400);
+  const invalidPriceResponse = await page.request.get("/api/spaces?minRate=100&maxRate=50");
+  expect(invalidPriceResponse.status()).toBe(400);
+
   const unique = Date.now();
   const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
   start.setMinutes(0, 0, 0);
@@ -62,6 +67,19 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await page.getByLabel("Destination").fill("CI Test Locality");
   await page.getByLabel("Start time").fill(localDateTime(start));
   await page.getByLabel("End time").fill(localDateTime(end));
+  await page.getByLabel("Vehicle type").selectOption("bike");
+  await page.getByLabel("Max ₹/hr").fill("100");
+  await page.getByRole("button", { name: "Find parking" }).click();
+  await expect(page.getByText(/No active spaces match/)).toBeVisible();
+  await page.getByLabel("Vehicle type").selectOption("car");
+  await page.getByLabel("Max ₹/hr").fill("50");
+  await page.getByRole("button", { name: "Find parking" }).click();
+  await expect(page.getByText(/No active spaces match/)).toBeVisible();
+  await page.getByLabel("Min ₹/hr").fill("70");
+  await page.getByLabel("Max ₹/hr").fill("100");
+  await page.getByRole("button", { name: "Find parking" }).click();
+  await expect(page.getByText(/No active spaces match/)).toBeVisible();
+  await page.getByLabel("Min ₹/hr").fill("0");
   await page.getByRole("button", { name: "Find parking" }).click();
   await expect(page.getByRole("heading", { name: new RegExp(`CI Test Parking ${unique}`) })).toBeVisible();
   await page.getByRole("button", { name: "Hold this space for 10 minutes" }).click();

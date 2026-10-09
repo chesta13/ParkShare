@@ -30,6 +30,11 @@ export default function Home() {
     const locality = String(form.get("destination") ?? "").trim();
     const startValue = String(form.get("startAt") ?? "");
     const endValue = String(form.get("endAt") ?? "");
+    const vehicleType = String(form.get("vehicleType") ?? "any");
+    const minRateText = String(form.get("minRate") ?? "").trim();
+    const maxRateText = String(form.get("maxRate") ?? "").trim();
+    const minRate = minRateText ? Number(minRateText) : undefined;
+    const maxRate = maxRateText ? Number(maxRateText) : undefined;
     if (Boolean(startValue) !== Boolean(endValue)) {
       setError("Choose both a start and end time, or leave both empty.");
       setLoading(false);
@@ -42,11 +47,21 @@ export default function Home() {
       setLoading(false);
       return;
     }
+    if ((minRateText && (!Number.isFinite(minRate) || minRate! < 0 || minRate! > 100000)) ||
+        (maxRateText && (!Number.isFinite(maxRate) || maxRate! < 0 || maxRate! > 100000)) ||
+        (minRate !== undefined && maxRate !== undefined && minRate > maxRate)) {
+      setError("Price filters must be between ₹0 and ₹100,000, with minimum no greater than maximum.");
+      setLoading(false);
+      return;
+    }
     setBookingWindow(startDate && endDate ? { startAt: startDate.toISOString(), endAt: endDate.toISOString() } : null);
     setBookingMessage("");
 
     const params = new URLSearchParams();
     if (locality) params.set("locality", locality);
+    if (vehicleType !== "any") params.set("vehicleType", vehicleType);
+    if (minRate !== undefined) params.set("minRate", String(minRate));
+    if (maxRate !== undefined) params.set("maxRate", String(maxRate));
     if (startValue && endValue) {
       params.set("startAt", new Date(startValue).toISOString());
       params.set("endAt", new Date(endValue).toISOString());
@@ -103,6 +118,9 @@ export default function Home() {
           <div className="field"><label htmlFor="destination">Where</label><input id="destination" name="destination" placeholder="Destination or locality" aria-label="Destination" /></div>
           <div className="field"><label htmlFor="startAt">Start</label><input id="startAt" name="startAt" type="datetime-local" aria-label="Start time" /></div>
           <div className="field"><label htmlFor="endAt">End</label><input id="endAt" name="endAt" type="datetime-local" aria-label="End time" /></div>
+          <div className="field"><label htmlFor="vehicleType">Vehicle type</label><select id="vehicleType" name="vehicleType" defaultValue="any"><option value="any">Any vehicle</option><option value="car">Car</option><option value="suv">SUV</option><option value="bike">Motorcycle</option></select></div>
+          <div className="field"><label htmlFor="minRate">Min ₹/hr</label><input id="minRate" name="minRate" type="number" min="0" max="100000" step="1" placeholder="Any" /></div>
+          <div className="field"><label htmlFor="maxRate">Max ₹/hr</label><input id="maxRate" name="maxRate" type="number" min="0" max="100000" step="1" placeholder="Any" /></div>
           <button className="btn btn-primary" type="submit" disabled={loading}>{loading ? "Searching…" : "Find parking"}</button>
         </form>
         {error && <div className="error-card" role="alert">{error} {error.toLowerCase().includes("sign in") && <Link href="/login">Sign in</Link>}</div>}
@@ -111,7 +129,7 @@ export default function Home() {
 
       <section className="container section">
         <h2>Parking spaces</h2>
-        <p className="section-intro">Search returns active listings from ParkShare, filtered by locality and availability.</p>
+        <p className="section-intro">Search active listings by locality, availability, vehicle fit, and hourly budget.</p>
         {spaces === null && <p className="section-intro">Enter a destination and optional time window above to find available spaces.</p>}
         {spaces !== null && !loading && !error && spaces.length === 0 && <p className="section-intro">No active spaces match that search yet. Try another locality or time.</p>}
         <div className="cards">

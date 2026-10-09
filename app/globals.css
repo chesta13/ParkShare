@@ -32,10 +32,10 @@ button { cursor: pointer; }
 .hero { padding: 64px 0 48px; text-align: center; }
 .hero h1 { font-size: clamp(42px, 7vw, 72px); line-height: .98; letter-spacing: -3px; margin: 0 auto 18px; max-width: 800px; }
 .hero p { color: var(--muted); font-size: 19px; max-width: 650px; margin: 0 auto 32px; line-height: 1.55; }
-.search-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 10px; display: grid; grid-template-columns: 1.5fr 1fr 1fr auto; gap: 8px; box-shadow: 0 15px 40px rgba(16, 24, 40, .08); text-align: left; }
+.search-card { background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 10px; display: grid; grid-template-columns: minmax(160px, 1.5fr) repeat(5, minmax(90px, 1fr)) auto; gap: 8px; box-shadow: 0 15px 40px rgba(16, 24, 40, .08); text-align: left; }
 .field { padding: 8px 12px; }
 .field label { display: block; font-size: 12px; font-weight: 800; color: var(--muted); margin-bottom: 5px; text-transform: uppercase; letter-spacing: .04em; }
-.field input { width: 100%; border: 0; outline: 0; background: transparent; color: var(--text); }
+.field input, .field select { width: 100%; min-width: 0; border: 0; outline: 0; background: transparent; color: var(--text); }
 .search-card .btn { align-self: center; height: 48px; }
 
 .section { padding: 38px 0 80px; }
@@ -58,6 +58,11 @@ button { cursor: pointer; }
 .step p { margin: 0; color: #cbd5e1; line-height: 1.5; }
 
 .footer { border-top: 1px solid var(--line); padding: 24px 0 50px; color: var(--muted); font-size: 14px; }
+
+@media (max-width: 1100px) {
+  .search-card { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .search-card .btn { grid-column: 1 / -1; }
+}
 
 @media (max-width: 800px) {
   .search-card { grid-template-columns: 1fr 1fr; }

@@ -25,6 +25,24 @@ export async function GET(request: NextRequest) {
   }
   const city = params.get("city")?.trim();
   const locality = params.get("locality")?.trim();
+  const vehicleTypeText = params.get("vehicleType");
+  const minRateText = params.get("minRate");
+  const maxRateText = params.get("maxRate");
+  const minRate = minRateText === null || minRateText.trim() === "" ? undefined : Number(minRateText);
+  const maxRate = maxRateText === null || maxRateText.trim() === "" ? undefined : Number(maxRateText);
+  if (vehicleTypeText && !["any", "car", "suv", "bike"].includes(vehicleTypeText)) {
+    return NextResponse.json({ error: "Choose a supported vehicle type." }, { status: 400 });
+  }
+  if ((minRateText !== null && minRateText.trim() !== "" && (!Number.isFinite(minRate) || minRate! < 0 || minRate! > 100000)) ||
+      (maxRateText !== null && maxRateText.trim() !== "" && (!Number.isFinite(maxRate) || maxRate! < 0 || maxRate! > 100000)) ||
+      (minRate !== undefined && maxRate !== undefined && minRate > maxRate)) {
+    return NextResponse.json({ error: "Price filters must be between ₹0 and ₹100,000, with minimum no greater than maximum." }, { status: 400 });
+  }
+  const vehicleType = vehicleTypeText && vehicleTypeText !== "any" ? vehicleTypeText : undefined;
+  const hourlyRateFilter = {
+    ...(minRate !== undefined ? { gte: Math.round(minRate * 100) } : {}),
+    ...(maxRate !== undefined ? { lte: Math.round(maxRate * 100) } : {}),
+  };
   const startText = params.get("startAt");
   const endText = params.get("endAt");
   let startAt: Date | undefined;
@@ -47,6 +65,8 @@ export async function GET(request: NextRequest) {
         status: SpaceStatus.ACTIVE,
         ...(city ? { city: { contains: city, mode: "insensitive" as const } } : {}),
         ...(locality ? { locality: { contains: locality, mode: "insensitive" as const } } : {}),
+        ...(vehicleType ? { vehicleTypes: { has: vehicleType } } : {}),
+        ...(minRate !== undefined || maxRate !== undefined ? { hourlyRateMinor: hourlyRateFilter } : {}),
         ...(startAt && endAt ? {
           bookings: { none: {
             OR: [

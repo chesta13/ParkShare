@@ -52,7 +52,7 @@ ParkShare is intentionally **not** a society/RWA management product in the MVP. 
 
 **Stage:** Functional marketplace foundation; pre-payment MVP
 
-Implemented flows include account registration/login with signed sessions, database-backed listing drafts, owner publishing, availability windows, active-space search, server-calculated booking prices, serializable booking holds, booking history, cancellation, and expiry handling. CI runs dependency auditing, lint, type checking, unit tests, a production build, and Playwright end-to-end coverage.
+Implemented flows include account registration/login with signed sessions, database-backed listing drafts, owner publishing, availability windows, locality/time search with vehicle-type and hourly-price filters, server-calculated booking prices, serializable booking holds, booking history, cancellation, and expiry handling. CI runs dependency auditing, lint, type checking, unit tests, a production build, and Playwright end-to-end coverage.
 
 Not implemented: live payment processing, email verification, password reset, reviews, admin moderation, map-based discovery, and production deployment. Booking holds do not charge money. A configured PostgreSQL database and a unique `SESSION_SECRET` are required to exercise database-backed flows locally.
 
