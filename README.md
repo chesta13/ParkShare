@@ -50,9 +50,11 @@ ParkShare is intentionally **not** a society/RWA management product in the MVP. 
 
 ## Repository status
 
-**Stage:** Marketplace foundation and first functional flows
+**Stage:** Functional marketplace foundation; pre-payment MVP
 
-The repository now includes the initial product and data model, repeatable CI, account registration/login with signed sessions, database-backed listing drafts, owner publishing, active-space search, and expiring booking holds with server-calculated prices. Payment processing, email verification, password reset, reviews, moderation workflows, and production deployment remain future milestones. A configured PostgreSQL database and a unique `SESSION_SECRET` are required to exercise the database-backed flows locally.
+Implemented flows include account registration/login with signed sessions, database-backed listing drafts, owner publishing, availability windows, active-space search, server-calculated booking prices, serializable booking holds, booking history, cancellation, and expiry handling. CI runs dependency auditing, lint, type checking, unit tests, a production build, and Playwright end-to-end coverage.
+
+Not implemented: live payment processing, email verification, password reset, reviews, admin moderation, map-based discovery, and production deployment. Booking holds do not charge money. A configured PostgreSQL database and a unique `SESSION_SECRET` are required to exercise database-backed flows locally.
 
 ## Core principle
 
@@ -68,4 +70,4 @@ The repository now includes the initial product and data model, repeatable CI, a
 5. Apply the initial Prisma schema with `npm run db:push` and generate the client with `npm run db:generate`.
 6. Start the web app with `npm run dev`.
 
-The current account/listing flows require a reachable PostgreSQL database. Payments, email verification, password reset, booking creation, moderation and production deployment are not implemented yet; do not use this MVP for real payments or sensitive production data.
+The account, listing, search, and booking-hold flows require a reachable PostgreSQL database. Real payments, email verification, password reset, reviews, admin moderation, and production deployment are not implemented yet. Do not use this MVP for real payments or sensitive production data.
