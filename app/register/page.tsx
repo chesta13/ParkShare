@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 export default function RegisterPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setHydrated(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -54,7 +60,7 @@ export default function RegisterPage() {
             <label className="full">I want to<select name="role" defaultValue="BOTH"><option value="DRIVER">Find parking (driver)</option><option value="OWNER">List my parking space (owner)</option><option value="BOTH">Find parking and list a space</option></select></label>
           </div></fieldset>
           {error && <div className="error-card" role="alert">{error}</div>}
-          <div className="form-actions"><Link className="btn" href="/">Cancel</Link><button className="btn btn-primary" type="submit" disabled={saving}>{saving ? "Creating account…" : "Create account"}</button></div>
+          <div className="form-actions"><Link className="btn" href="/">Cancel</Link><button className="btn btn-primary" type="submit" disabled={!hydrated || saving}>{saving ? "Creating account…" : "Create account"}</button></div>
         </form>
         <p className="form-intro">Already have an account? <Link href="/login">Sign in</Link>.</p>
       </section>
