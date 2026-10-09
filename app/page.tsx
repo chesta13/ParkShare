@@ -17,7 +17,7 @@ export default function Home() {
 
       <section className="container hero">
         <h1>Park closer.<br />Share smarter.</h1>
-        <p>Find a private parking space when you need one — and earn from yours when you don't.</p>
+        <p>Find a private parking space when you need one — and earn from yours when you don&apos;t.</p>
 
         <form className="search-card">
           <div className="field">
