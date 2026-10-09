@@ -3,6 +3,20 @@
 import Link from "next/link";
 import { useCallback, useEffect, useState } from "react";
 
+type OwnerBooking = {
+  id: string;
+  startAt: string;
+  endAt: string;
+  totalMinor: number;
+  currency: string;
+  status: string;
+  paymentStatus: string;
+  holdExpiresAt: string | null;
+  createdAt: string;
+  driver: { name: string | null };
+  space: { title: string; locality: string; city: string };
+};
+
 type Space = {
   id: string;
   title: string;
@@ -18,6 +32,9 @@ export default function OwnerPage() {
   const [signedOut, setSignedOut] = useState(false);
   const [error, setError] = useState("");
   const [updatingId, setUpdatingId] = useState("");
+  const [bookings, setBookings] = useState<OwnerBooking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [bookingError, setBookingError] = useState("");
 
   const loadSpaces = useCallback(async () => {
     try {
@@ -38,10 +55,28 @@ export default function OwnerPage() {
     }
   }, []);
 
+  const loadBookings = useCallback(async () => {
+    try {
+      const response = await fetch("/api/owner/bookings", { cache: "no-store" });
+      const result = await response.json().catch(() => ({}));
+      if (response.status === 401) {
+        setBookings([]);
+        return;
+      }
+      if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Could not load incoming bookings.");
+      setBookings(Array.isArray(result.bookings) ? result.bookings : []);
+      setBookingError("");
+    } catch (caught) {
+      setBookingError(caught instanceof Error ? caught.message : "Could not load incoming bookings.");
+    } finally {
+      setBookingsLoading(false);
+    }
+  }, []);
+
   useEffect(() => {
-    const frame = window.requestAnimationFrame(() => { void loadSpaces(); });
+    const frame = window.requestAnimationFrame(() => { void loadSpaces(); void loadBookings(); });
     return () => window.cancelAnimationFrame(frame);
-  }, [loadSpaces]);
+  }, [loadSpaces, loadBookings]);
 
   async function publishSpace(id: string) {
     setUpdatingId(id);
@@ -77,6 +112,7 @@ export default function OwnerPage() {
     await fetch("/api/auth/logout", { method: "POST" });
     setSignedOut(true);
     setSpaces([]);
+    setBookings([]);
   }
 
   return (
@@ -119,6 +155,28 @@ export default function OwnerPage() {
                 {(space.status === "DRAFT" || space.status === "PAUSED") && <button className="btn btn-primary" disabled={updatingId === space.id} onClick={() => void publishSpace(space.id)}>{updatingId === space.id ? "Publishing…" : "Publish listing"}</button>}
                 {space.status === "ACTIVE" && <><p className="meta">Visible in public parking search.</p><button className="btn" disabled={updatingId === space.id} onClick={() => void pauseSpace(space.id)}>{updatingId === space.id ? "Pausing…" : "Pause listing"}</button></>}
                 {space.status === "BLOCKED" && <p className="meta">This listing is blocked from publication.</p>}
+              </div>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="container section">
+        <h2>Recent booking activity</h2>
+        <p className="section-intro">Temporary holds remain pending until payment is integrated; they are not paid reservations.</p>
+        {bookingsLoading && <p className="section-intro">Loading booking activity…</p>}
+        {bookingError && <div className="error-card" role="alert">{bookingError}</div>}
+        {!bookingsLoading && !bookingError && bookings.length === 0 && <p className="section-intro">No booking activity yet.</p>}
+        <div className="cards">
+          {bookings.map((booking) => (
+            <article className="card" key={booking.id}>
+              <div className="card-body">
+                <h3>{booking.space.title}</h3>
+                <p className="meta">{booking.driver.name || "ParkShare driver"} · {booking.space.locality}, {booking.space.city}</p>
+                <p className="meta">{new Date(booking.startAt).toLocaleString()} – {new Date(booking.endAt).toLocaleString()}</p>
+                <p className="price">{new Intl.NumberFormat("en-IN", { style: "currency", currency: booking.currency }).format(booking.totalMinor / 100)}</p>
+                <p className="meta">Status: {booking.status} · Payment: {booking.paymentStatus}</p>
+                {booking.status === "PENDING_PAYMENT" && booking.holdExpiresAt && <p className="meta">Hold expires: {new Date(booking.holdExpiresAt).toLocaleString()}</p>}
               </div>
             </article>
           ))}

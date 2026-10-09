@@ -2,12 +2,18 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 export default function LoginPage() {
   const router = useRouter();
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => setHydrated(true));
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -47,7 +53,7 @@ export default function LoginPage() {
             <label className="full">Password<input required type="password" name="password" autoComplete="current-password" maxLength={128} /></label>
           </div></fieldset>
           {error && <div className="error-card" role="alert">{error}</div>}
-          <div className="form-actions"><Link className="btn" href="/">Cancel</Link><button className="btn btn-primary" type="submit" disabled={saving}>{saving ? "Signing in…" : "Sign in"}</button></div>
+          <div className="form-actions"><Link className="btn" href="/">Cancel</Link><button className="btn btn-primary" type="submit" disabled={!hydrated || saving}>{saving ? "Signing in…" : "Sign in"}</button></div>
         </form>
         <p className="form-intro">New to ParkShare? <Link href="/register">Create an account</Link>.</p>
       </section>

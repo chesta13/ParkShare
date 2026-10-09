@@ -24,13 +24,14 @@ test("sign-in and registration screens are reachable", async ({ page }) => {
   await expect(page.getByRole("heading", { name: "Create your ParkShare account." })).toBeVisible();
 });
 
-test("owner can publish a listing and a driver can create and cancel a booking hold", async ({ page }) => {
+test("owner can publish a listing and a driver can create and cancel a booking hold", async ({ page, browser }) => {
   const invalidVehicleResponse = await page.request.get("/api/spaces?vehicleType=truck");
   expect(invalidVehicleResponse.status()).toBe(400);
   const invalidPriceResponse = await page.request.get("/api/spaces?minRate=100&maxRate=50");
   expect(invalidPriceResponse.status()).toBe(400);
 
   const unique = Date.now();
+  const ownerPassword = "ParkShare-CI-Owner-123!";
   const start = new Date(Date.now() + 24 * 60 * 60 * 1000);
   start.setMinutes(0, 0, 0);
   const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
@@ -38,7 +39,7 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await page.goto("/register");
   await page.getByLabel("Name").fill("CI Owner");
   await page.getByLabel("Email").fill(`owner-${unique}@example.com`);
-  await page.getByLabel(/Password/).fill("ParkShare-CI-Owner-123!");
+  await page.getByLabel(/Password/).fill(ownerPassword);
   await page.getByLabel("I want to").selectOption("OWNER");
   await page.getByRole("button", { name: "Create account" }).click();
   await page.getByRole("link", { name: /List my space/ }).click();
@@ -75,7 +76,10 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await page.getByLabel("Email").fill(`driver-${unique}@example.com`);
   await page.getByLabel(/Password/).fill("ParkShare-CI-Driver-123!");
   await page.getByLabel("I want to").selectOption("DRIVER");
+  const driverRegistrationPromise = page.waitForResponse((response) => response.url().endsWith("/api/auth/register") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Create account" }).click();
+  const driverRegistrationResponse = await driverRegistrationPromise;
+  expect(driverRegistrationResponse.status()).toBe(201);
   const unauthorizedPauseResponse = await page.request.post(`/api/spaces/${createdSpace.id}/pause`);
   expect(unauthorizedPauseResponse.status()).toBe(403);
   await page.getByLabel("Destination").fill("CI Test Locality");
@@ -98,6 +102,17 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await expect(page.getByRole("heading", { name: new RegExp(`CI Test Parking ${unique}`) })).toBeVisible();
   await page.getByRole("button", { name: "Hold this space for 10 minutes" }).click();
   await expect(page.getByRole("status")).toContainText("Payment is not integrated yet; no charge has been taken.");
+
+  const ownerContext = await browser.newContext();
+  const ownerPage = await ownerContext.newPage();
+  await ownerPage.goto("/login");
+  await ownerPage.getByLabel("Email").fill(`owner-${unique}@example.com`);
+  await ownerPage.getByLabel("Password").fill(ownerPassword);
+  await ownerPage.getByRole("button", { name: "Sign in" }).click();
+  await expect(ownerPage.getByRole("heading", { name: "Recent booking activity" })).toBeVisible();
+  await expect(ownerPage.getByText(new RegExp(`CI Test Parking ${unique}`))).toBeVisible();
+  await expect(ownerPage.getByText(/Status: PENDING_PAYMENT · Payment: PENDING/)).toBeVisible();
+  await ownerContext.close();
 
   await page.getByRole("link", { name: "My bookings" }).click();
   await expect(page.getByRole("heading", { name: "My bookings" })).toBeVisible();
