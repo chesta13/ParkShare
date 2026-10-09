@@ -50,10 +50,22 @@ ParkShare is intentionally **not** a society/RWA management product in the MVP. 
 
 ## Repository status
 
-**Stage:** Project initialization
+**Stage:** Marketplace foundation and first functional flows
 
-The first development milestone is to establish the product requirements, architecture, data model, API contracts, and frontend/backend foundations before implementing marketplace flows.
+The repository now includes the initial product and data model, repeatable CI, account registration/login with signed sessions, database-backed listing drafts, owner publishing, and active-space search. Booking creation, payment processing, email verification, moderation workflows, and production deployment remain future milestones. A configured PostgreSQL database and a unique `SESSION_SECRET` are required to exercise the database-backed flows locally.
 
 ## Core principle
 
 > Build the smallest system that can prove strangers will successfully transact around unused parking capacity — then add complexity only when the real-world problem demands it.
+
+
+## Local development
+
+1. Install Node.js 22 or newer and PostgreSQL.
+2. Copy `.env.example` to `.env` and set `DATABASE_URL` to your local database connection string.
+3. Replace `SESSION_SECRET` with a unique random value of at least 32 characters. Do not commit `.env` or production secrets.
+4. Install the locked dependencies with `npm ci`.
+5. Apply the initial Prisma schema with `npm run db:push` and generate the client with `npm run db:generate`.
+6. Start the web app with `npm run dev`.
+
+The current account/listing flows require a reachable PostgreSQL database. Payments, email verification, password reset, booking creation, moderation and production deployment are not implemented yet; do not use this MVP for real payments or sensitive production data.

@@ -65,3 +65,46 @@ button { cursor: pointer; }
   .cards, .how { grid-template-columns: 1fr; }
   .hero { padding-top: 38px; }
 }
+
+
+/* Forms and account pages */
+.form-shell { max-width: 760px; padding: 42px 0 80px; }
+.eyebrow { color: var(--brand); font-size: 12px; font-weight: 800; letter-spacing: .08em; margin-bottom: 12px; }
+.form-shell h1 { font-size: clamp(32px, 5vw, 48px); letter-spacing: -1.8px; line-height: 1.05; margin: 0 0 12px; }
+.form-intro { color: var(--muted); line-height: 1.55; margin: 0 0 24px; }
+.listing-form { display: grid; gap: 18px; }
+.listing-form fieldset { min-width: 0; border: 1px solid var(--line); border-radius: 14px; padding: 20px; background: var(--surface); }
+.listing-form legend { font-weight: 800; padding: 0 8px; }
+.form-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.form-grid label { display: grid; gap: 7px; font-size: 14px; font-weight: 700; }
+.form-grid label.full { grid-column: 1 / -1; }
+.form-grid input, .form-grid select, .form-grid textarea { width: 100%; min-width: 0; border: 1px solid #d0d5dd; border-radius: 9px; background: white; padding: 11px 12px; color: var(--text); }
+.form-grid textarea { resize: vertical; }
+.form-grid input:focus, .form-grid select:focus, .form-grid textarea:focus { outline: 2px solid #93baff; border-color: var(--brand); }
+.form-actions { display: flex; justify-content: flex-end; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 8px; }
+.btn-large { display: inline-block; text-align: center; }
+.btn:disabled { cursor: wait; opacity: .65; }
+.success-card { background: white; border: 1px solid #a7e3c5; border-radius: 16px; padding: 24px; }
+.success-icon { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: #dcfce7; color: #166534; font-weight: 900; margin-bottom: 14px; }
+.success-card h2 { margin: 0 0 8px; }
+.success-card p { color: var(--muted); line-height: 1.55; }
+.error-card { background: #fff1f0; border: 1px solid #fecdca; color: #912018; border-radius: 10px; padding: 12px 14px; line-height: 1.5; margin: 12px 0; }
+.error-card a { color: inherit; font-weight: 800; text-decoration: underline; }
+
+/* Owner dashboard */
+.owner-hero { display: grid; grid-template-columns: 1.2fr .8fr; align-items: center; gap: 32px; padding: 52px 0 34px; }
+.owner-hero h1 { font-size: clamp(36px, 5vw, 58px); line-height: 1; letter-spacing: -2px; margin: 0 0 18px; }
+.owner-hero p { color: var(--muted); line-height: 1.55; }
+.owner-card { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 26px; box-shadow: 0 15px 40px rgba(16, 24, 40, .06); }
+.owner-card-label { color: var(--muted); font-size: 12px; font-weight: 800; letter-spacing: .06em; }
+.owner-card h2 { margin: 14px 0 8px; }
+.owner-card .btn { margin-top: 8px; }
+.owner-checklist .step { min-height: 170px; }
+
+@media (max-width: 800px) {
+  .form-shell { padding-top: 28px; }
+  .form-grid, .owner-hero { grid-template-columns: 1fr; }
+  .listing-form fieldset { padding: 16px; }
+  .form-actions { justify-content: stretch; }
+  .form-actions .btn { flex: 1; }
+}
