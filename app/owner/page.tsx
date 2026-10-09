@@ -17,7 +17,7 @@ export default function OwnerPage() {
   const [loading, setLoading] = useState(true);
   const [signedOut, setSignedOut] = useState(false);
   const [error, setError] = useState("");
-  const [publishingId, setPublishingId] = useState("");
+  const [updatingId, setUpdatingId] = useState("");
 
   const loadSpaces = useCallback(async () => {
     try {
@@ -39,32 +39,12 @@ export default function OwnerPage() {
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    void fetch("/api/spaces?mine=1", { cache: "no-store" })
-      .then(async (response) => ({ response, result: await response.json().catch(() => ({})) }))
-      .then(({ response, result }) => {
-        if (cancelled) return;
-        if (response.status === 401) {
-          setSignedOut(true);
-          setSpaces([]);
-        } else if (!response.ok) {
-          setError(typeof result.error === "string" ? result.error : "Could not load your listings.");
-        } else {
-          setSignedOut(false);
-          setSpaces(Array.isArray(result.spaces) ? result.spaces : []);
-        }
-      })
-      .catch(() => {
-        if (!cancelled) setError("Could not load your listings.");
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => { cancelled = true; };
-  }, []);
+    const frame = window.requestAnimationFrame(() => { void loadSpaces(); });
+    return () => window.cancelAnimationFrame(frame);
+  }, [loadSpaces]);
 
   async function publishSpace(id: string) {
-    setPublishingId(id);
+    setUpdatingId(id);
     setError("");
     try {
       const response = await fetch(`/api/spaces/${encodeURIComponent(id)}/publish`, { method: "POST" });
@@ -74,7 +54,22 @@ export default function OwnerPage() {
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : "Could not publish this listing.");
     } finally {
-      setPublishingId("");
+      setUpdatingId("");
+    }
+  }
+
+  async function pauseSpace(id: string) {
+    setUpdatingId(id);
+    setError("");
+    try {
+      const response = await fetch(`/api/spaces/${encodeURIComponent(id)}/pause`, { method: "POST" });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Could not pause this listing.");
+      await loadSpaces();
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Could not pause this listing.");
+    } finally {
+      setUpdatingId("");
     }
   }
 
@@ -121,8 +116,9 @@ export default function OwnerPage() {
               <div className="card-body">
                 <div className="card-top"><div><h3>{space.title}</h3><div className="meta">{space.locality}, {space.city}</div></div><div className="price">₹{space.hourlyRate}/hr</div></div>
                 <p className="meta">Status: {space.status}</p>
-                {space.status === "DRAFT" && <button className="btn btn-primary" disabled={publishingId === space.id} onClick={() => void publishSpace(space.id)}>{publishingId === space.id ? "Publishing…" : "Publish listing"}</button>}
-                {space.status === "ACTIVE" && <p className="meta">Visible in public parking search.</p>}
+                {(space.status === "DRAFT" || space.status === "PAUSED") && <button className="btn btn-primary" disabled={updatingId === space.id} onClick={() => void publishSpace(space.id)}>{updatingId === space.id ? "Publishing…" : "Publish listing"}</button>}
+                {space.status === "ACTIVE" && <><p className="meta">Visible in public parking search.</p><button className="btn" disabled={updatingId === space.id} onClick={() => void pauseSpace(space.id)}>{updatingId === space.id ? "Pausing…" : "Pause listing"}</button></>}
+                {space.status === "BLOCKED" && <p className="meta">This listing is blocked from publication.</p>}
               </div>
             </article>
           ))}

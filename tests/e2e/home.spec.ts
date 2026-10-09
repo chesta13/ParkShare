@@ -52,9 +52,21 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await page.getByLabel("Available from").fill(localDateTime(start));
   await page.getByLabel("Available until").fill(localDateTime(end));
   await page.getByLabel(/Hourly price/).fill("60");
+  const listingResponsePromise = page.waitForResponse((response) => response.url().endsWith("/api/spaces") && response.request().method() === "POST");
   await page.getByRole("button", { name: "Save listing draft" }).click();
+  const listingResponse = await listingResponsePromise;
+  expect(listingResponse.status()).toBe(201);
+  const { space: createdSpace } = await listingResponse.json() as { space: { id: string } };
   await expect(page.getByRole("heading", { name: "Listing draft saved." })).toBeVisible();
   await page.getByRole("link", { name: "Back to dashboard" }).click();
+  await page.getByRole("button", { name: "Publish listing" }).click();
+  await expect(page.getByText("Status: ACTIVE")).toBeVisible();
+  await page.getByRole("button", { name: "Pause listing" }).click();
+  await expect(page.getByText("Status: PAUSED")).toBeVisible();
+  const pausedSearchResponse = await page.request.get(`/api/spaces?locality=CI%20Test%20Locality&startAt=${encodeURIComponent(start.toISOString())}&endAt=${encodeURIComponent(end.toISOString())}`);
+  expect(pausedSearchResponse.ok()).toBeTruthy();
+  const pausedSearchResult = await pausedSearchResponse.json() as { spaces: Array<{ title: string }> };
+  expect(pausedSearchResult.spaces.some((space) => space.title === `CI Test Parking ${unique}`)).toBe(false);
   await page.getByRole("button", { name: "Publish listing" }).click();
   await expect(page.getByText("Status: ACTIVE")).toBeVisible();
 
@@ -64,6 +76,8 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await page.getByLabel(/Password/).fill("ParkShare-CI-Driver-123!");
   await page.getByLabel("I want to").selectOption("DRIVER");
   await page.getByRole("button", { name: "Create account" }).click();
+  const unauthorizedPauseResponse = await page.request.post(`/api/spaces/${createdSpace.id}/pause`);
+  expect(unauthorizedPauseResponse.status()).toBe(403);
   await page.getByLabel("Destination").fill("CI Test Locality");
   await page.getByLabel("Start time").fill(localDateTime(start));
   await page.getByLabel("End time").fill(localDateTime(end));
