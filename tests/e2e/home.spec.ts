@@ -103,7 +103,7 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await page.getByRole("button", { name: "Hold this space for 10 minutes" }).click();
   await expect(page.getByRole("status")).toContainText("Payment is not integrated yet; no charge has been taken.");
 
-  const ownerContext = await browser.newContext();
+  const ownerContext = await browser.newContext({ baseURL: "http://127.0.0.1:3000" });
   const ownerPage = await ownerContext.newPage();
   await ownerPage.goto("/login");
   await ownerPage.getByLabel("Email").fill(`owner-${unique}@example.com`);
