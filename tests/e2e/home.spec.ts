@@ -39,7 +39,7 @@ test("owner can publish a listing and a driver can create and cancel a booking h
   await page.getByLabel("Address or access description").fill("Use the marked driveway entrance.");
   await page.getByLabel("Listing title").fill(`CI Test Parking ${unique}`);
   await page.getByLabel("Vehicle type").selectOption("car");
-  await page.getByLabel("Description").fill("Automated test listing.");
+  await page.getByLabel("Description", { exact: true }).fill("Automated test listing.");
   await page.getByLabel("Available from").fill(localDateTime(start));
   await page.getByLabel("Available until").fill(localDateTime(end));
   await page.getByLabel(/Hourly price/).fill("60");
