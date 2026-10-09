@@ -9,9 +9,17 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   const userId = verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
   if (!userId) return NextResponse.json({ error: "Sign in to manage your bookings." }, { status: 401 });
   const { id } = await context.params;
+  const now = new Date();
   try {
+    const expired = await prisma.booking.updateMany({
+      where: { id, driverId: userId, status: BookingStatus.PENDING_PAYMENT, paymentStatus: PaymentStatus.PENDING, holdExpiresAt: { lte: now } },
+      data: { status: BookingStatus.EXPIRED },
+    });
+    if (expired.count > 0) {
+      return NextResponse.json({ error: "This booking hold has expired.", status: BookingStatus.EXPIRED }, { status: 410 });
+    }
     const result = await prisma.booking.updateMany({
-      where: { id, driverId: userId, status: BookingStatus.PENDING_PAYMENT, paymentStatus: PaymentStatus.PENDING },
+      where: { id, driverId: userId, status: BookingStatus.PENDING_PAYMENT, paymentStatus: PaymentStatus.PENDING, holdExpiresAt: { gt: now } },
       data: { status: BookingStatus.CANCELLED },
     });
     if (result.count === 0) {

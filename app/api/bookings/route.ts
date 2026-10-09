@@ -18,6 +18,11 @@ export async function GET(request: NextRequest) {
   const userId = verifySessionToken(request.cookies.get(SESSION_COOKIE)?.value);
   if (!userId) return NextResponse.json({ error: "Sign in to view your bookings." }, { status: 401 });
   try {
+    const now = new Date();
+    await prisma.booking.updateMany({
+      where: { status: BookingStatus.PENDING_PAYMENT, paymentStatus: PaymentStatus.PENDING, holdExpiresAt: { lte: now } },
+      data: { status: BookingStatus.EXPIRED },
+    });
     const bookings = await prisma.booking.findMany({
       where: { driverId: userId },
       select: {
@@ -61,6 +66,10 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    await prisma.booking.updateMany({
+      where: { status: BookingStatus.PENDING_PAYMENT, paymentStatus: PaymentStatus.PENDING, holdExpiresAt: { lte: now } },
+      data: { status: BookingStatus.EXPIRED },
+    });
     const user = await prisma.user.findUnique({ where: { id: userId }, select: { role: true } });
     if (!user || (user.role !== UserRole.DRIVER && user.role !== UserRole.BOTH)) {
       return NextResponse.json({ error: "A driver account is required to book a space." }, { status: 403 });

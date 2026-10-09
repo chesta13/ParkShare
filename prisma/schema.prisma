@@ -26,6 +26,7 @@ enum BookingStatus {
   ACTIVE
   COMPLETED
   CANCELLED
+  EXPIRED
   PAYMENT_FAILED
 }
 

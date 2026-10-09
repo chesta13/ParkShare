@@ -41,6 +41,10 @@ export default function BookingsPage() {
     try {
       const response = await fetch(`/api/bookings/${encodeURIComponent(id)}/cancel`, { method: "POST" });
       const result = await response.json().catch(() => ({}));
+      if (response.status === 410 && result.status === "EXPIRED") {
+        setBookings((current) => current.map((booking) => booking.id === id ? { ...booking, status: "EXPIRED" } : booking));
+        return;
+      }
       if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Could not cancel the booking.");
       setBookings((current) => current.map((booking) => booking.id === id ? { ...booking, status: "CANCELLED" } : booking));
     } catch (caught) {
@@ -70,6 +74,7 @@ export default function BookingsPage() {
                 <p><strong>Total:</strong> ₹{(booking.totalMinor / 100).toFixed(2)}</p>
                 <p className="meta">Status: {booking.status} · Payment: {booking.paymentStatus}</p>
                 {booking.status === "PENDING_PAYMENT" && booking.holdExpiresAt && <p className="meta">Hold expires: {new Date(booking.holdExpiresAt).toLocaleString()}</p>}
+                {booking.status === "EXPIRED" && <p className="meta">This hold expired and the space is available again.</p>}
                 {booking.status === "PENDING_PAYMENT" && <button className="btn" onClick={() => void cancelBooking(booking.id)}>Cancel hold</button>}
               </div>
             </article>
