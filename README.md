@@ -52,7 +52,7 @@ ParkShare is intentionally **not** a society/RWA management product in the MVP. 
 
 **Stage:** Marketplace foundation and first functional flows
 
-The repository now includes the initial product and data model, repeatable CI, account registration/login with signed sessions, database-backed listing drafts, owner publishing, and active-space search. Booking creation, payment processing, email verification, moderation workflows, and production deployment remain future milestones. A configured PostgreSQL database and a unique `SESSION_SECRET` are required to exercise the database-backed flows locally.
+The repository now includes the initial product and data model, repeatable CI, account registration/login with signed sessions, database-backed listing drafts, owner publishing, active-space search, and expiring booking holds with server-calculated prices. Payment processing, email verification, password reset, reviews, moderation workflows, and production deployment remain future milestones. A configured PostgreSQL database and a unique `SESSION_SECRET` are required to exercise the database-backed flows locally.
 
 ## Core principle
 

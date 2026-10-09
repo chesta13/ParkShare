@@ -19,6 +19,8 @@ export default function Home() {
   const [spaces, setSpaces] = useState<Space[] | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [bookingMessage, setBookingMessage] = useState("");
+  const [bookingWindow, setBookingWindow] = useState<{ startAt: string; endAt: string } | null>(null);
 
   async function handleSearch(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,11 +35,15 @@ export default function Home() {
       setLoading(false);
       return;
     }
-    if (startValue && endValue && new Date(startValue) >= new Date(endValue)) {
-      setError("End time must be later than start time.");
+    const startDate = startValue ? new Date(startValue) : null;
+    const endDate = endValue ? new Date(endValue) : null;
+    if (startValue && endValue && (!startDate || !endDate || Number.isNaN(startDate.getTime()) || Number.isNaN(endDate.getTime()) || startDate >= endDate)) {
+      setError("Choose valid times and make sure end time is later than start time.");
       setLoading(false);
       return;
     }
+    setBookingWindow(startDate && endDate ? { startAt: startDate.toISOString(), endAt: endDate.toISOString() } : null);
+    setBookingMessage("");
 
     const params = new URLSearchParams();
     if (locality) params.set("locality", locality);
@@ -58,11 +64,33 @@ export default function Home() {
     }
   }
 
+  async function bookSpace(spaceId: string) {
+    if (!bookingWindow) {
+      setError("Choose a start and end time before booking.");
+      return;
+    }
+    setError("");
+    setBookingMessage("");
+    try {
+      const response = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ spaceId, ...bookingWindow }),
+      });
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(typeof result.error === "string" ? result.error : "Booking could not be created.");
+      setBookingMessage(typeof result.message === "string" ? result.message : "Booking hold created.");
+    } catch (caught) {
+      setError(caught instanceof Error ? caught.message : "Booking could not be created.");
+    }
+  }
+
   return (
     <main>
       <header className="container nav">
         <Link className="logo" href="/">Park<span>Share</span></Link>
         <div className="nav-actions">
+          <Link className="btn" href="/bookings">My bookings</Link>
           <Link className="btn" href="/owner">List your space</Link>
           <Link className="btn btn-primary" href="/login">Sign in</Link>
         </div>
@@ -77,7 +105,8 @@ export default function Home() {
           <div className="field"><label htmlFor="endAt">End</label><input id="endAt" name="endAt" type="datetime-local" aria-label="End time" /></div>
           <button className="btn btn-primary" type="submit" disabled={loading}>{loading ? "Searching…" : "Find parking"}</button>
         </form>
-        {error && <div className="error-card" role="alert">{error}</div>}
+        {error && <div className="error-card" role="alert">{error} {error.toLowerCase().includes("sign in") && <Link href="/login">Sign in</Link>}</div>}
+        {bookingMessage && <div className="success-card" role="status">{bookingMessage}</div>}
       </section>
 
       <section className="container section">
@@ -93,6 +122,7 @@ export default function Home() {
                 <div className="card-top"><div><h3>{space.title}</h3><div className="meta">{space.locality} · {space.city}</div></div><div className="price">₹{space.hourlyRate}/hr</div></div>
                 {space.description && <p className="meta">{space.description}</p>}
                 <div className="meta">Vehicle: {space.vehicleTypes.join(", ")}</div>
+                {bookingWindow ? <button className="btn btn-primary" onClick={() => void bookSpace(space.id)}>Hold this space for 10 minutes</button> : <p className="meta">Choose a start and end time above to book this space.</p>}
               </div>
             </article>
           ))}

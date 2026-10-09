@@ -49,7 +49,10 @@ export async function GET(request: NextRequest) {
         ...(locality ? { locality: { contains: locality, mode: "insensitive" as const } } : {}),
         ...(startAt && endAt ? {
           bookings: { none: {
-            status: { in: [BookingStatus.PENDING_PAYMENT, BookingStatus.CONFIRMED, BookingStatus.ACTIVE] },
+            OR: [
+              { status: { in: [BookingStatus.CONFIRMED, BookingStatus.ACTIVE] } },
+              { status: BookingStatus.PENDING_PAYMENT, holdExpiresAt: { gt: new Date() } },
+            ],
             startAt: { lt: endAt },
             endAt: { gt: startAt },
           } },
